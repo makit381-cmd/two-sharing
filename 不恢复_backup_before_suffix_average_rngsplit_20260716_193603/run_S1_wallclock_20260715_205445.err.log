@@ -1,0 +1,72 @@
+Assertion failed: Fatal Java Exception. See this file for details: C:\Users\19712\AppData\Local\Temp\hs_error_pid7700.log
+
+Function: void __cdecl `anonymous-namespace'::mwJavaAbort(void), file B:\matlab\src\jmi\jmi\javainit.cpp, line 1464
+
+--------------------------------------------------------------------------------
+                Assertion detected at 2026-07-15 20:55:05 +0800
+--------------------------------------------------------------------------------
+
+Configuration:
+  Crash Decoding           : Disabled - No sandbox or build area path
+  Crash Mode               : continue (default)
+  Default Encoding         : UTF-8
+  Java Version             : Java 1.8.0_202-b08 with Oracle Corporation Java HotSpot(TM) 64-Bit Server VM mixed mode
+  MATLAB Architecture      : win64
+  MATLAB Root              : D:\Matlab 2024 a
+  MATLAB Version           : 24.1.0.2537033 (R2024a)
+  Operating System         : Microsoft Windows 11 家庭版
+  Process ID               : 7700
+  Processor ID             : x86 Family 6 Model 154 Stepping 3, GenuineIntel
+  Session Key              : 0ed88ff1-ad7b-487d-81e9-cd99d74eb241
+  Window System            : Version 10.0 (Build 26200)
+
+Fault Count: 1
+
+
+Additional Log Files:
+  Java Crash Report        : C:\Users\19712\AppData\Local\Temp\hs_error_pid7700.log
+
+
+Assertion in void __cdecl `anonymous-namespace'::mwJavaAbort(void) at B:\matlab\src\jmi\jmi\javainit.cpp line 1464:
+Fatal Java Exception. See this file for details: C:\Users\19712\AppData\Local\Temp\hs_error_pid7700.log
+
+Current Thread: '' id 5944
+
+Register State (captured):
+  RAX = 00007fff758b7208  RBX = 00007fff758b7208
+  RCX = 000000efd5ef9ce0  RDX = 00007fff758618f0
+  RSP = 000000efd5ef9c20  RBP = 00000000000005b8
+  RSI = 000002e720dd1e80  RDI = 00007fff758b7208
+ 
+   R8 = 0000000000000004   R9 = 000000efd5ef9b98
+  R10 = 00007fffb9400000  R11 = 0000000000000000
+  R12 = 000000efd5efa320  R13 = 000002e701fe0170
+  R14 = 00007ffe9d14c460  R15 = 00007fff758a7138
+ 
+  RIP = 00007fff757a1c8a  EFL = 00000202
+ 
+   CS = 0033   FS = 0053   GS = 002b
+
+Stack Trace (captured):
+[  0] 0x00007fff7579b093             D:\Matlab 2024 a\bin\win64\libmwfl.dll+00045203 foundation::core::diag::thread_context::unspecified_bool+00000051
+[  1] 0x00007fff757994c8             D:\Matlab 2024 a\bin\win64\libmwfl.dll+00038088 foundation::core::diag::stacktrace_base::capture+00000024
+[  2] 0x00007fff7579e3fe             D:\Matlab 2024 a\bin\win64\libmwfl.dll+00058366 foundation::core::diag::symbols::getSymbolAddress+00012654
+[  3] 0x00007fff7579cde1             D:\Matlab 2024 a\bin\win64\libmwfl.dll+00052705 foundation::core::diag::symbols::getSymbolAddress+00006993
+[  4] 0x00007fff757a148b             D:\Matlab 2024 a\bin\win64\libmwfl.dll+00070795 foundation::core::diag::terminate+00000059
+[  5] 0x00007ffe9d0ac5bf                 D:\Matlab 2024 a\bin\win64\jmi.dll+00705983 mljShutdown+00000287
+[  6] 0x000000005b2a9ead D:\Matlab 2024 a\sys\java\jre\win64\jre\bin\server\jvm.dll+02727597 JVM_FindSignal+00002829
+[  7] 0x000000005b29208b D:\Matlab 2024 a\sys\java\jre\win64\jre\bin\server\jvm.dll+02629771 JVM_ResolveClass+00634555
+[  8] 0x000000005b2aac26 D:\Matlab 2024 a\sys\java\jre\win64\jre\bin\server\jvm.dll+02731046 JVM_FindSignal+00006278
+[  9] 0x000000005b2af52d D:\Matlab 2024 a\sys\java\jre\win64\jre\bin\server\jvm.dll+02749741 JVM_FindSignal+00024973
+[ 10] 0x000000005b345d98 D:\Matlab 2024 a\sys\java\jre\win64\jre\bin\server\jvm.dll+03366296 JVM_FindSignal+00641528
+[ 11] 0x00007fffdaee47af                      C:\WINDOWS\SYSTEM32\ntdll.dll+01460143 _chkstk+00000159
+[ 12] 0x00007fffdada21c7                      C:\WINDOWS\SYSTEM32\ntdll.dll+00139719 RtlLocateExtendedFeature+00001431
+[ 13] 0x00007fffdaee40ee                      C:\WINDOWS\SYSTEM32\ntdll.dll+01458414 KiUserExceptionDispatcher+00000046
+[ 14] 0x000002e701fe0aca                                   <unknown-module>+00000000
+
+** This crash report has been saved to disk as C:\Users\19712\AppData\Local\Temp\matlab_crash_dump.7700-1 **
+
+
+
+MATLAB is exiting because of fatal error
+ERROR: MATLAB error Exit Status: 0x00000003, abort()

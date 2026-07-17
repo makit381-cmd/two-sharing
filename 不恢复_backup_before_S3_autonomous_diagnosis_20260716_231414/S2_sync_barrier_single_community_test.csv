@@ -1,0 +1,2 @@
+community_id,wall_iter,price_update_count,eu_response_count,avg_cnt,avg_start_price_update,formal_cv_kW,formal_cv_stable_pass,stop_reason,runtime_s,barrier_price_count_pass,waiting_price_hold_pass,waiting_average_hold_pass,average_only_on_update_pass,average_count_pass,cycle_response_count_pass,wall_ge_cycle_pass,pass
+1,3150,450,38250,0,NaN,618.14848472491,0,max_inner_iter_unchecked_qre,0.0363235,1,1,1,1,1,1,1,1

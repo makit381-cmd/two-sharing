@@ -1,0 +1,9 @@
+function obj = euLocalLagrangian( ...
+    pg, pes, pb, ps, c_j, b_j, a_i, lambda, pi_max, pi_min)
+%EULOCALLAGRANGIAN Complete fixed-lambda local EU Lagrangian objective.
+% The -lambda*pes term is part of the local objective and must not be omitted.
+
+obj = 0.5 .* c_j .* pg.^2 + b_j .* pg ...
+    + pi_max .* pb - pi_min .* ps ...
+    + 0.5 .* a_i .* pes.^2 - lambda .* pes;
+end

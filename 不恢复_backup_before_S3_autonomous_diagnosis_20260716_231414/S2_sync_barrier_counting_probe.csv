@@ -1,0 +1,2 @@
+wall_iter,price_update_count,avg_cnt,avg_start_price_update,formal_cv_kW,stop_reason,average_count_pass,barrier_count_pass
+140,20,18,2,1258.62600000685,max_inner_iter_unchecked_qre,1,1

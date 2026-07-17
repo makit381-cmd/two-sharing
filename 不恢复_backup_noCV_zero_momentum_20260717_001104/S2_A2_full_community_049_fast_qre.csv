@@ -1,0 +1,2 @@
+community_id,mode,wall_event,price_updates,avg_start_price_update,avg_samples,formal_cv_kW,cv_tol_kW,held_cv_kW,stop_reason,runtime_s,qre_gap_max,qre_gap_p95,qre_audit_count,success_gate
+49,fast_qre,92736,13248,8815,4433,19.3898129254621,83.3445018689556,4.77444050662098,dynamic_average_sync_price_step_and_relative_cv,361.2286814,0.000719574714989957,5.92307013191906e-06,52670,1

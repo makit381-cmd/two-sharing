@@ -74,7 +74,7 @@ res.stop_reason = '';
 h = 1;
 
 if progress_print_enabled
-    fprintf('[S1 inner start] k=%d, community=%d, EU=%d, CV limit=%.3f kW\n', ...
+    fprintf('[S1 inner start] k=%d, community=%d, EU=%d, CV diagnostic reference=%.3f kW\n', ...
         outer_iter, community_id, N, inner_cv_tol_kW);
 end
 

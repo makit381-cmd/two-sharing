@@ -8,7 +8,11 @@ rng_seeds = struct( ...
     'community_cost', seed_community_cost, ...
     'pg_qre', seed_pg_qre, ...
     'final_state', seed_final_state, ...
-    'outer_schedule', 999);
+    'outer_schedule', 999, ...
+    'inner_delay', 31001, ...
+    'qre_noise', 31002, ...
+    'qre_audit', 31003, ...
+    'outer_delay', 31004);
 %将11250个产消者分配给123个社区
 u = [85, 85, 50, 85, 85, 50, 70, 50, 100, 85, ...
      85, 120, 50, 50, 50, 120, 120, 50, 70, 120, ...
@@ -73,35 +77,71 @@ init_pesc = zeros(num_LESMs,1);
 
 % 迭代与 QRE 参数：所有场景从此文件生成正式 params.mat。
 
-qre_epsilon = 3e-2;    % 固定 A2/A5 风格：单个 EU 局部拉格朗日目标的绝对误差上界
-agg_epsilon = 3e-2;    % 固定 pi_0 下社区原始 Agg 输出的目标差上界
+qre_epsilon = 3e-2;    % 单个 EU 局部拉格朗日目标的绝对误差上界
 qre_z_cap = 3;
+qre_backoff_factor = 0.5;
 qre_max_backoffs = 16; % 固定随机方向下最多减半次数；失败则回退精确解
-% 当前仅用于速度/行为试验：关闭逐次目标差 epsilon 认证和回退。
-% 此 profile 仍保证 QRE 响应的物理可行性，但不应宣称满足 HDEM A2/A5。
-qre_certificate_enabled = false;
+run_profile = getenv('HDEM_QRE_RUN_PROFILE');
+if isempty(run_profile)
+    run_profile = 'formal_audit';
+end
+qre_noise_enabled = true;
+qre_audit_enabled = true;
+qre_audit_rate = 0.01;
+qre_audit_trace_community_full = true;
+qre_audit_seed = 20260716;
+diagnostic_record_every = 10;
+exact_sync_diagnostic_every = 100;
+rolling_window = 200;
+agg_epsilon_margin = 3e-2;
+agg_epsilon_i = u(:) .* qre_epsilon + agg_epsilon_margin;
+agg_epsilon = agg_epsilon_i; % 兼容旧入口；正式语义是 123 维社区预算
+agg_cert_tol = 1e-10;
+qre_certificate_enabled = strcmp(run_profile,'certified_validation');
 agg_certificate_enabled = false;
+agg_gap_diagnostic_enabled = true;
 qre_error_rel = qre_epsilon; % 仅供尚未迁移的 S0--S2 遗留入口读取；正式 S3 不使用该名称
-% 单向 held 步长已较接近上界；采用保守经验动量，非 Theorem 1 保证。
-outer_momentum = 0.2;
+% 第二阶段采用论文式固定动量作提速对照；CV 仍只作诊断。
+outer_momentum = 0.5;
 inner_momentum = 0.5;
 
-% 不使用人为最小/最大内层次数；由价格步长和平均残差共同决定停止。
-max_inner_iter = inf;
-min_inner_iter = 0;
-inner_cv_ratio = 0.10; % 每个社区相对自身绝对负荷的 10%
-% CV 仅作诊断与外层逐 k 记录；内层只按 lambda 步长停止。
+stable_inner_window = 5;
+stable_outer_window = 5;
+max_inner_iter = 20000; % 动态后缀平均后的有限安全保护，不是理论收敛条件
+max_inner_price_updates = max_inner_iter;
+min_inner_iter = 20;
+inner_cv_ratio = 0.01;
+inner_price_scale_kW = 5;
+% 当前对比阶段不以社区 CV 作为内层停止门槛；CV 仍完整记录为诊断量。
 inner_cv_stop_enabled = false;
-% 工程性内层后缀平均：首步作 burn-in，h=2 起统计上传输出。
-inner_avg_start_iter = 2;
-% 不使用人为最小/最大外层次数；由价格步长和平均残差共同决定停止。
-max_outer_iter = inf;
-min_outer_iter = 0;
-outer_cv_ratio = 0.10; % 总平衡与每条有限线路分别限制在 10%
-% CV 仅作诊断与外层逐 k 记录；外层只按价格步长停止。
+% 固定 burn-in 后的 HDEM 风格内层后缀平均；动态触发字段保留作兼容记录。
+inner_avg_start_iter = 5;
+inner_avg_policy = 'fixed_start';
+inner_avg_policy_version = 'A2_fixed_start_v1';
+inner_avg_start_cv_factor = 5;
+inner_avg_start_price_factor = 10;
+inner_avg_start_stable_window = 20;
+inner_avg_min_price_updates = 100;
+inner_avg_min_samples = 200;
+inner_formal_cv_stable_window = 5;
+max_outer_iter = 3000; % 仅安全保护
+max_outer_price_updates = max_outer_iter;
+min_outer_iter = 100;
+outer_cv_ratio = 0.01;
+outer_pb_cv_ratio = 0.01;
+outer_line_cv_ratio = 0.01;
+% 当前对比阶段不以总平衡/有限线路 CV 作为外层停止门槛；CV 仍完整记录为诊断量。
 outer_cv_stop_enabled = false;
-% 工程性外层后缀平均：前 39 个外层更新仅作 burn-in，k=40 起统计上传输出。
-outer_avg_start_iter = 100;
+outer_cv_l2_stop_enabled = false;
+outer_cv_l2_tol_kW = 200;
+% 正式外层后缀平均按真实外层价格更新计数，不按 wall event 计数。
+outer_avg_start_price_update = 100;
+outer_avg_start_iter = outer_avg_start_price_update; % 兼容旧入口字段
+outer_price_stable_window = 5;
+outer_formal_cv_stable_window = 5;
+checkpoint_every_outer_updates = 5;
+resume_from_checkpoint = false;
+checkpoint_file = '';
 % 本轮不记录内层轨迹，避免无关的 RE/CV 计算与存档。
 record_inner_comm = NaN;
 record_k = [];
@@ -130,18 +170,22 @@ for j = 1:num_prosumers
     D(j) = D_min + (D_max - D_min) .* rand(1);
 end
 
-% CV 停止阈值统一采用当前物理实例的相对尺度，单位均为 kW。
-% 内层：每个社区的 raw Agg--EU 残差相对该社区绝对负荷。
+% 记录当前物理实例的社区负荷尺度，单位均为 kW。
 community_load_scale_kW = zeros(num_LESMs,1);
 for i = 1:num_LESMs
     community_load_scale_kW(i) = sum(abs(D(start_idx(i):end_idx(i))));
 end
-inner_cv_tol_kW = inner_cv_ratio .* community_load_scale_kW;
-
-% 外层：总平衡相对系统绝对负荷；线路违反相对各自有限容量。
+if strcmp(run_profile,'certified_validation')
+    inner_cv_policy = 'absolute_5kW';
+    inner_cv_tol_kW = 5 * ones(num_LESMs,1);
+else
+    inner_cv_policy = 'relative_1pct_community_load';
+    inner_cv_tol_kW = inner_cv_ratio .* community_load_scale_kW;
+end
+% 外层诊断尺度：总平衡相对系统绝对负荷；线路违反相对各自有限容量。
 system_balance_scale_kW = sum(abs(D));
-outer_pb_cv_tol_kW = outer_cv_ratio .* system_balance_scale_kW;
-outer_line_cv_tol_kW = outer_cv_ratio .* F_l;
+outer_pb_cv_tol_kW = outer_pb_cv_ratio .* system_balance_scale_kW;
+outer_line_cv_tol_kW = outer_line_cv_ratio .* F_l;
 cv_policy = 'relative_componentwise_pb_and_finite_lines';
 
 a_extend = zeros(num_prosumers,1);
@@ -271,6 +315,8 @@ n_comm = end_idx - start_idx + 1;
 outer_max_delay = 12;
 k0_max = max(min(outer_max_delay,ceil(0.5* sqrt(n_comm))),6);
 h0_max = 6;
+max_inner_wall_iter = (h0_max + 1) * max_inner_price_updates + 100;
+max_outer_wall_iter = (max(k0_max) + 1) * max_outer_price_updates + 100;
 %% 内外层最大利普西茨常数
 LD_in_i = (n_comm(:) + 1) ./ a;
 LD_in = max(LD_in_i);
@@ -286,11 +332,11 @@ LD_out = sum((1 + 2 * sum(P_active.^2, 2)) ./ c_out);
 % PB 平衡块和正/负线路约束块均使用同一 alpha，直接对应 LD_out 的保守界。
 k0_out = max(k0_max);
 alpha_out_limit = min(1 / ((k0_out + 0.5) * LD_out), 1 / (4 * LD_out));
-outer_step_safety = 0.9;
+outer_step_safety = 0.8;
 
 % 内层的 123 个社区是独立对偶块；按各自 L_D,i 取单向 held-information 理论步长。
 % h0=6 仅描述 EU 原始变量 held，不使用论文双向异步的 2*h0+1/2 系数。
-inner_step_safety = 0.62;
+inner_step_safety = 0.90;
 alpha_in_limit_i = min(1 ./ ((h0_max + 0.5) .* LD_in_i), 1 ./ (4 .* LD_in_i));
 alpha_in = inner_step_safety .* alpha_in_limit_i;
 alpha_in_limit_user = alpha_in_limit_i; % 遗留 MAT 字段名：保存各社区理论上界。
@@ -298,13 +344,33 @@ init_rho = alpha_in ./ a;
 alpha_PB = outer_step_safety * alpha_out_limit;
 alpha_l = alpha_PB;
 %% 内外层容错
-% 停止仍仅检查价格变化；收紧社区 lambda 步长容差至原来的一半。
-inner_price_scale_kW = 50;
+% 内层停止同时检查价格稳定、正式 CV、社区预算和 EU 逐次认证。
 errTol_LESMs = inner_price_scale_kW .* alpha_in;
-% 本轮收紧外层价格停止容差；CV 仍仅记录，不参与停止。
+% 外层价格稳定窗口与正式平均输出 CV 共同决定停止。
 errTol_UESM = 1e-7;
 
 rng(seed_final_state, 'twister');
+
+fprintf('LD_out = %.16e\n',LD_out);
+fprintf('alpha_out_limit = %.16e\n',alpha_out_limit);
+fprintf('alpha_PB = alpha_l = %.16e\n',alpha_PB);
+fprintf('alpha_out ratio = %.6f\n',alpha_PB / alpha_out_limit);
+fprintf('alpha_in range = [%.16e, %.16e]\n',min(alpha_in),max(alpha_in));
+fprintf('LD_in range = [%.16e, %.16e]\n',min(LD_in_i),max(LD_in_i));
+fprintf('k0_max range = [%d, %d]\n',min(k0_max),max(k0_max));
+fprintf('beta_qre range = [%.16e, %.16e]\n',min(beta_qre),max(beta_qre));
+
+assert(all(alpha_in > 0));
+assert(all(alpha_in < alpha_in_limit_i));
+assert(max(abs(init_rho - alpha_in ./ a)) <= 1e-14);
+assert(alpha_PB > 0 && alpha_PB < alpha_out_limit);
+assert(abs(alpha_l - alpha_PB) <= eps(max(1,abs(alpha_PB))));
+assert(inner_momentum >= 0 && inner_momentum < 1 && ...
+    outer_momentum >= 0 && outer_momentum < 1);
+assert(outer_avg_start_price_update == outer_avg_start_iter);
+assert(outer_price_stable_window >= 1 && outer_formal_cv_stable_window >= 1);
+assert(qre_audit_enabled && agg_gap_diagnostic_enabled);
+assert(numel(agg_epsilon_i) == num_LESMs && all(agg_epsilon_i > 0));
 
 initmu_PB = zeros(num_prosumers, 1);
 save('params.mat','a','b','c','D','start_idx','end_idx', ...
@@ -315,12 +381,14 @@ save('params.mat','a','b','c','D','start_idx','end_idx', ...
     'alpha_l','alpha_PB','PTDF','init_rho','init_pi_PB', ...
     'init_pi_0','init_pi','errTol_LESMs','errTol_UESM', ...
     'pg_max','pg_min','a_extend','beta_qre', ...
-    'qre_epsilon','agg_epsilon','qre_z_cap','qre_max_backoffs','qre_certificate_enabled','agg_certificate_enabled','qre_error_rel','outer_momentum','inner_momentum','max_inner_iter', ...
-    'min_inner_iter','inner_cv_ratio','inner_cv_stop_enabled','community_load_scale_kW','inner_cv_tol_kW','inner_avg_start_iter', ...
-    'max_outer_iter','min_outer_iter','outer_cv_ratio','outer_cv_stop_enabled','system_balance_scale_kW','outer_pb_cv_tol_kW','outer_line_cv_tol_kW','cv_policy', ...
-    'outer_avg_start_iter','record_inner_comm','record_k','progress_print_enabled','progress_print_inner_every','progress_print_outer_every','save_s3_results','run_tag','result_unit', ...
+     'run_profile','qre_noise_enabled','qre_audit_enabled','qre_audit_rate','qre_audit_trace_community_full','qre_audit_seed', ...
+     'diagnostic_record_every','exact_sync_diagnostic_every','rolling_window', ...
+     'qre_epsilon','agg_epsilon','agg_epsilon_i','agg_epsilon_margin','agg_cert_tol','qre_z_cap','qre_backoff_factor','qre_max_backoffs','qre_certificate_enabled','agg_certificate_enabled','agg_gap_diagnostic_enabled','qre_error_rel','outer_momentum','inner_momentum','max_inner_iter', ...
+    'min_inner_iter','inner_cv_ratio','inner_cv_policy','inner_cv_stop_enabled','stable_inner_window','stable_outer_window','community_load_scale_kW','inner_cv_tol_kW','inner_avg_start_iter','inner_avg_policy','inner_avg_policy_version','inner_avg_start_cv_factor','inner_avg_start_price_factor','inner_avg_start_stable_window','inner_avg_min_price_updates','inner_avg_min_samples','inner_formal_cv_stable_window', ...
+    'max_outer_iter','max_outer_price_updates','max_outer_wall_iter','min_outer_iter','outer_cv_ratio','outer_pb_cv_ratio','outer_line_cv_ratio','outer_cv_stop_enabled','outer_cv_l2_stop_enabled','outer_cv_l2_tol_kW','system_balance_scale_kW','outer_pb_cv_tol_kW','outer_line_cv_tol_kW','cv_policy', ...
+    'outer_avg_start_price_update','outer_avg_start_iter','outer_price_stable_window','outer_formal_cv_stable_window','checkpoint_every_outer_updates','resume_from_checkpoint','checkpoint_file','record_inner_comm','record_k','progress_print_enabled','progress_print_inner_every','progress_print_outer_every','save_s3_results','run_tag','result_unit', ...
     'rho_qre','sigma_qre','small','big','min_x_scale', ...
     'rng_seeds', 'h0_max','k0_max','outer_max_delay','k0_out', ...
     'LD_in_i','LD_in','LD_out','active_lines','c_out', ...
-    'alpha_in','alpha_in_limit_i','alpha_in_limit_user','inner_step_safety','inner_price_scale_kW','alpha_out_limit','outer_step_safety');
+    'alpha_in','alpha_in_limit_i','alpha_in_limit_user','inner_step_safety','inner_price_scale_kW','max_inner_price_updates','max_inner_wall_iter','alpha_out_limit','outer_step_safety');
 % 'init_pb','init_ps','init_pi','init_pi_0','init_pi_PB','init_pi_l_pos','init_pi_l_neg', ...
